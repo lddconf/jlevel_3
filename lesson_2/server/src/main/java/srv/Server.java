@@ -1,9 +1,11 @@
-package server;
+package srv;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.HashMap;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.Iterator;
 
@@ -12,7 +14,7 @@ public class Server {
     private ServerSocket serverSocket;
     private Socket socket;
     private Logger view;
-    private SimpleAuthService authService;
+    private SqliteAuthService authService;
 
     private Thread mainRing;
 
@@ -22,8 +24,9 @@ public class Server {
     public Server( int port ) {
         this.port = port;
         view = new Logger();
-        authService = new SimpleAuthService();
 
+        //authService = new SimpleAuthService();
+        authService = new SqliteAuthService();
         clients = new HashSet<>();
         mainRing = new Thread(()->{
             try {
@@ -41,6 +44,7 @@ public class Server {
             } finally {
                 try {
                     serverSocket.close();
+                    authService.close();
                 } catch (IOException e ) {
                     e.printStackTrace();
                 }
@@ -122,4 +126,23 @@ public class Server {
         }
     }
 
+    public boolean newNickName( String login, String newNickName, String oldNickName, IOHandler handler ) {
+        boolean result;
+        synchronized (authService) {
+            result = authService.changeNickForLogin(login, newNickName);
+        }
+        if ( !result ) return result;
+
+        synchronized (clients) {
+            //Inform online users
+            Iterator<IOHandler> iterator = clients.iterator();
+            while ( iterator.hasNext() ) {
+                IOHandler nextHandler = iterator.next();
+                if ( nextHandler != handler ) {
+                    nextHandler.sendUserNickNameChanged(oldNickName, newNickName);
+                }
+            }
+        }
+        return true;
+    }
 }

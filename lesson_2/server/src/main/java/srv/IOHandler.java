@@ -1,6 +1,6 @@
-package server;
+package srv;
 
-import javafx.scene.Parent;
+//import javafx.scene.Parent;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -16,6 +16,7 @@ public class IOHandler {
     private Socket socket;
     private Server server;
     private String nick;
+    private String login;
     private String connectionInfo;
     private DataInputStream  istream;
     private DataOutputStream ostream;
@@ -77,6 +78,7 @@ public class IOHandler {
 
                         synchronized (this) {
                             nick = server.getNickNameFor(tokens[1], tokens[2]);
+                            login = tokens[1];
                         }
 
                         if ( nick == null ) {
@@ -96,6 +98,24 @@ public class IOHandler {
                         String str = istream.readUTF();
                         if ( str.equals("/end") ) {
                             break;
+                        }
+
+                        if (str.startsWith("/newNick ")) {
+                            String[] tokens = str.split("\\s", 2);
+                            if ( tokens.length == 2 ) {
+                                if ( server.newNickName(login, tokens[1], nick, this) ) {
+                                    log.printMessage(nick,  nick + " switched to " + tokens[1] );
+                                    sendMessage("/nickChangedOk " + tokens[1]);
+                                    nick = tokens[1];
+                                } else {
+                                    log.printMessage(nick,  nick + " error switching to " + tokens[1] );
+                                    sendMessage("/nickChangeErr ");
+                                }
+                            } else {
+                                log.printMessage(nick,  nick + " error switching to " + tokens[1] );
+                                sendMessage("/nickChangeErr ");
+                            }
+                            continue;
                         }
 
                         if (str.startsWith("/w ")) {
@@ -154,6 +174,10 @@ public class IOHandler {
         } else {
             this.sendMessage("/clientlistoffline " +  userList );
         }
+    }
+
+    public void sendUserNickNameChanged( String fromNickName, String toNickName ) {
+        this.sendMessage("/nickChanged " + fromNickName + " " +  toNickName );
     }
 
     public void shutDown() {

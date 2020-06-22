@@ -17,11 +17,8 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
-import server.Loggable;
-
 
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.net.URL;
 import java.util.Collections;
 import java.util.ResourceBundle;
@@ -52,6 +49,9 @@ public class Controller implements Initializable, Loggable {
     public ComboBox<String> usersList;
 
     @FXML
+    public MenuItem menuChangeNickName;
+
+    @FXML
     private Button button;
 
     @FXML
@@ -62,11 +62,16 @@ public class Controller implements Initializable, Loggable {
     private ClientIOHandler handler;
     private RegistrationController registrationController;
     private Stage regStage;
+
+    private SwitchNickNameController newNickNameController;
+    private Stage nicknameStage;
+
     static final String SEND_TO_ALL = " ALL";
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
         setAuthenticated(false);
         regStage = createRegWindow();
+        nicknameStage = createNewNicknameWindow();
         setTitle("Not connected");
 
 
@@ -82,6 +87,10 @@ public class Controller implements Initializable, Loggable {
                 }
             });
         });
+    }
+
+    public void setNickName(String nickName) {
+        setTitle(nickName);
     }
 
     public void setAuthenticated(boolean status) {
@@ -109,6 +118,7 @@ public class Controller implements Initializable, Loggable {
         }
 
         menuRegistration.setDisable(status);
+        menuChangeNickName.setDisable(!status);
     }
 
 
@@ -189,7 +199,7 @@ public class Controller implements Initializable, Loggable {
         Stage stage = null;
 
         try {
-            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("registration.fxml"));
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/registration.fxml"));
             Parent root = fxmlLoader.load();
 
             stage = new Stage();
@@ -207,6 +217,28 @@ public class Controller implements Initializable, Loggable {
         return stage;
     }
 
+    private Stage createNewNicknameWindow() {
+        Stage stage = null;
+
+        try {
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/newnickname.fxml"));
+            Parent root = fxmlLoader.load();
+
+            stage = new Stage();
+            stage.setTitle("Switch Nickname");
+            stage.setScene(new Scene(root, 300,50));
+            stage.setResizable(false);
+            stage.initStyle(StageStyle.UTILITY);
+            stage.initModality(Modality.APPLICATION_MODAL);
+
+            newNickNameController = fxmlLoader.getController();
+            newNickNameController.controller = this;
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return stage;
+    }
 
     public void onRegClicked(ActionEvent actionEvent) {
         regStage.show();
@@ -220,6 +252,12 @@ public class Controller implements Initializable, Loggable {
         handler.tryRegistration(login, password, nickname);
     }
 
+    public void tryChangeNickName(String newNickname) {
+        if ( handler.isConnected()) {
+            handler.tryChangeNickName(newNickname);
+        }
+    }
+
     public void onConnectClicked(ActionEvent actionEvent) {
         if ( handler == null || !handler.isConnected()) {
             usersList.getItems().clear();
@@ -231,7 +269,7 @@ public class Controller implements Initializable, Loggable {
             setTitle("");
         } else {
             handler.disconnect();
-            connect.setText("Disconnect");
+            connect.setText("Connect");
             setTitle("[Not connected]");
         }
     }
@@ -253,5 +291,9 @@ public class Controller implements Initializable, Loggable {
             }
         }
 
+    }
+
+    public void onNewNNClicked(ActionEvent actionEvent) {
+        nicknameStage.show();
     }
 }

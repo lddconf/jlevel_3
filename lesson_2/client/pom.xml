@@ -9,7 +9,22 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>client</artifactId>
+    <dependencies>
+        <!-- https://mvnrepository.com/artifact/org.openjfx/javafx -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx</artifactId>
+            <version>14.0.1</version>
+            <type>pom</type>
+        </dependency>
+        <dependency>
+            <groupId>org.diirt.javafx</groupId>
+            <artifactId>javafx</artifactId>
+            <version>3.1.7</version>
+        </dependency>
 
+    </dependencies>
+
+    <artifactId>client</artifactId>
 
 </project>

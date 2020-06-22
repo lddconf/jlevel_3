@@ -1,7 +1,6 @@
-package server;
+package srv;
 
 import java.util.ArrayList;
-import java.util.Map;
 
 public class SimpleAuthService implements AuthService {
 
@@ -26,6 +25,10 @@ public class SimpleAuthService implements AuthService {
 
         public String getNickname() {
             return nickname;
+        }
+
+        public void setNickname(String nickname) {
+            this.nickname = nickname;
         }
     }
 
@@ -61,5 +64,17 @@ public class SimpleAuthService implements AuthService {
 
         users.add(new UserData(login, password, nickname));
         return true;
+    }
+
+    @Override
+    public boolean changeNickForLogin(String login, String newNickName) {
+        for (int i = 0; i < users.size(); i++) {
+            UserData usr = users.get(i);
+            if ( usr.getLogin().equals(login)  ) {
+                usr.setNickname(newNickName);
+                return true;
+            }
+        }
+        return false;
     }
 }

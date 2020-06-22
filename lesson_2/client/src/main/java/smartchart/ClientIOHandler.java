@@ -1,7 +1,5 @@
 package smartchart;
 
-import server.Loggable;
-
 import java.net.ConnectException;
 import java.net.Socket;
 import java.io.DataInputStream;
@@ -66,6 +64,7 @@ public class ClientIOHandler {
                             nick = tokens[1];
                             view.printMessage("I'm", "Authentication accepted");
                             controller.setAuthenticated(true);
+                            authenticated = true;
                             break;
                         }
                         view.printMessage("I'm", "Authentication error");
@@ -105,6 +104,27 @@ public class ClientIOHandler {
                                 controller.removeOfflineUsers(Arrays.copyOfRange(tokens, 1, tokens.length));
                             }
                         }
+
+                        if (str.startsWith("/nickChanged ")) {
+                            String[] tokens = str.split("\\s", 3 );
+                            if ( tokens.length == 3 ) {
+                                controller.removeOfflineUsers(Arrays.copyOfRange(tokens, 1, 2));
+                                controller.addOnlineUsers(Arrays.copyOfRange(tokens, 2, 3));
+                            }
+                        }
+
+                        if (str.startsWith("/nickChangedOk ")) {
+                            String[] tokens = str.split("\\s", 2 );
+                            if ( tokens.length == 2 ) {
+                                view.printMessage(nick, "changed to " + tokens[1]);
+                                nick = tokens[1];
+                                controller.setNickName(nick);
+                            }
+                        }
+
+                        if (str.startsWith("/nickChangeErr ")) {
+                            view.printMessage(nick, "nick change error");
+                        }
                     }
                 } catch (EOFException e ) {
                 } catch (ConnectException e) {
@@ -122,6 +142,7 @@ public class ClientIOHandler {
                     } finally {
                         socket = null;
                         controller.setAuthenticated(false);
+                        authenticated = false;
                     }
                 }
             });
@@ -169,6 +190,12 @@ public class ClientIOHandler {
         }
     }
 
+    public void tryChangeNickName(String newNickname) {
+        if (( authenticated ) && (socket != null ) && (socket.isConnected())) {
+            sendMessage("/newNick " + newNickname);
+        }
+    }
+
     public void disconnect()  {
         if ( isConnected() ) {
             sendMessage("/end");
@@ -181,6 +208,7 @@ public class ClientIOHandler {
             }
             t.interrupt();
             controller.setAuthenticated(false);
+            authenticated = false;
         }
     }
 }

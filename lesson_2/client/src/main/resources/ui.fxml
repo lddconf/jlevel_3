@@ -18,13 +18,14 @@
 <BorderPane fx:controller="smartchart.Controller"
             xmlns:fx="http://javafx.com/fxml" >
     <stylesheets>
-        <URL value="@/smartchart/css/style.css" />
+        <URL value="@/css/style.css" />
     </stylesheets>
     <top>
         <MenuBar>
             <Menu text="Program">
                 <MenuItem text="Connect" fx:id="connect" onAction="#onConnectClicked"/>
                 <MenuItem text="Registration" fx:id="menuRegistration" onAction="#onRegClicked"/>
+                <MenuItem text="Nickname" fx:id="menuChangeNickName" onAction="#onNewNNClicked"/>
                 <MenuItem text="Exit" fx:id="menuExit" onAction="#onExitClicked"/>
             </Menu>
         </MenuBar>
