@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns:fx="http://javafx.com/fxml"
+            fx:controller="smartchart.RegistrationController"
+            alignment = "center">
+    <GridPane>
+        <Label text="Login:     " GridPane.columnIndex="0" GridPane.rowIndex="0" />
+        <TextField fx:id="loginField" promptText="login" GridPane.columnIndex="1" GridPane.rowIndex="0" GridPane.hgrow="ALWAYS"/>
+    </GridPane>
+
+    <HBox>
+        <Label text="Password:" />
+        <PasswordField fx:id="passwordField" promptText="password" HBox.hgrow="ALWAYS"/>
+    </HBox>
+
+    <HBox>
+        <Label text="Nickname:" />
+        <TextField fx:id = "nickField" promptText="nickname" HBox.hgrow="ALWAYS"/>
+    </HBox>
+    <Button text="Registration" onAction="#onClick" />
+</VBox>
