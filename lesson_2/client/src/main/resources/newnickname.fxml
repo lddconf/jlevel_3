@@ -5,11 +5,17 @@
 <?import javafx.scene.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import java.net.URL ?>
 
-<HBox xmlns="http://javafx.com/javafx"
+<VBox xmlns="http://javafx.com/javafx"
             xmlns:fx="http://javafx.com/fxml"
             fx:controller="smartchart.SwitchNickNameController"
-            prefHeight="50.0" prefWidth="600.0">
-    <TextField fx:id = "nickNameField" promptText="nickname" HBox.hgrow="ALWAYS"/>
-    <Button text="Ok" onAction="#onClick" HBox.hgrow="SOMETIMES"/>
-</HBox>
+            minHeight="50.0" minWidth="600.0" maxHeight="50.0" maxWidth="600">
+    <stylesheets>
+        <URL value="@/css/style.css" />
+    </stylesheets>
+    <HBox>
+        <TextField fx:id = "nickNameField" promptText="nickname" alignment="BASELINE_CENTER" HBox.hgrow="ALWAYS" onKeyPressed="#onKeyPressed"/>
+        <Button text="Ok" onAction="#onClick" HBox.hgrow="SOMETIMES"/>
+    </HBox>
+</VBox>

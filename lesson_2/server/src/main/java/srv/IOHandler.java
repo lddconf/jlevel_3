@@ -109,11 +109,11 @@ public class IOHandler {
                                     nick = tokens[1];
                                 } else {
                                     log.printMessage(nick,  nick + " error switching to " + tokens[1] );
-                                    sendMessage("/nickChangeErr ");
+                                    sendMessage("/nickChangeErr Invalid or duplicate nickname specified");
                                 }
                             } else {
                                 log.printMessage(nick,  nick + " error switching to " + tokens[1] );
-                                sendMessage("/nickChangeErr ");
+                                sendMessage("/nickChangeErr Invalid command");
                             }
                             continue;
                         }

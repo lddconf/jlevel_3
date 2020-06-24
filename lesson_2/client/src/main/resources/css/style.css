@@ -11,6 +11,9 @@
     -fx-label-padding: 0.23em 0.2em 0.24em 0.2em;
 }
 
+.text-field {
+    -fx-font: 17px Tahoma;
+}
 .text-field.error {
   -fx-text-box-border: red ;
   -fx-focus-color: red ;

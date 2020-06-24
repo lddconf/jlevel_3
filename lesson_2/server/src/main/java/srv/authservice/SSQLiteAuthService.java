@@ -1,4 +1,7 @@
-package srv;
+package srv.authservice;
+
+import srv.AuthService;
+import srv.SQLAdapter;
 
 public class SSQLiteAuthService implements AuthService {
     @Override

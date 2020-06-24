@@ -1,44 +1,70 @@
 package smartchart;
 
 import java.io.*;
+import java.util.Iterator;
 import java.util.LinkedList;
 
-public class HistoryLogger {
+public class RingHistoryLogger {
     private File file;
     private int limit;
-    private LinkedList<String> messages;
+    private LinkedList<Message>   messages;
 
-    public HistoryLogger(String login) {
+    public RingHistoryLogger(String login) {
         limit = 0; //No limitation
         file = new File("history_" + login + ".txt");
         messages = new LinkedList<>();
     }
 
-    public void addMessage(String message) {
-        
+    public RingHistoryLogger(String login, int limit) {
+        this(login);
+        this.limit = limit; //No limitation
     }
 
-    public void saveLastMessages( String messages, int limit ) {
-        if ( !file.exists() ) {
-            return;
+    public synchronized void addMessage(String message) {
+        messages.add(new Message(message));
+        if ( limit > 0 && messages.size() > limit ) {
+            messages.removeFirst();
         }
+    }
 
+    public synchronized void addMessages(String messages) {
+        String[] tokens = messages.split("\\r\\n|\\n|\\r" );
+        for (int i = 0; i < tokens.length; i++) {
+            addMessage(tokens[i]);
+        }
+    }
+
+    public synchronized String[] getMessages() {
+        int i = 0;
+        String[] msg = new String[messages.size()];
+        Iterator<Message> iter = messages.iterator();
+
+        while( iter.hasNext() ) {
+            msg[i++] = iter.next().message;
+        }
+        return msg;
+    }
+
+    public synchronized void clear() {
+        messages.clear();
+    }
+
+    public synchronized boolean flushToFile() {
         BufferedWriter writer = null;
         try {
-            writer = new BufferedWriter(new FileWriter(file));
-            String[] tokens = messages.split("\\r\\n|\\n|\\r" );
-
-            int offset = 0;
-            if ( tokens.length > limit ) {
-                offset = tokens.length - limit;
-            }
-
-            for (int i = offset; i < tokens.length; i++) {
-                writer.write(tokens[i]);
+            writer = new BufferedWriter(new FileWriter(file,true));
+            Iterator<Message> iterator = messages.iterator();
+            while (iterator.hasNext()) {
+                Message msg = iterator.next();
+                if ( !msg.writed ) {
+                    writer.write(msg.message + "\n");
+                    msg.writed = true;
+                }
             }
             writer.flush();
-            writer.close();
+            return true;
         } catch (IOException e) {
+            return false;
         } finally {
             if ( writer != null ) {
                 try {
@@ -49,27 +75,47 @@ public class HistoryLogger {
         }
     }
 
-    public String[] restoreLastMessages(int limit) {
+    public synchronized boolean restoreFromFile() {
+        return restoreFromFileLastRecords(0);
+    }
+
+    public synchronized boolean restoreFromFileLastRecords(int limit) {
+        clear();
         if ( !file.exists() ) {
-            return null;
+            return false;
         }
 
+        BufferedReader reader = null;
         try {
-            BufferedReader reader = new BufferedReader(new FileReader(file));
-            LinkedList<String> msglist = new LinkedList<>();
+            reader = new BufferedReader(new FileReader(file));
             String line;
             while ((line = reader.readLine()) != null) {
-                msglist.add(line);
-                if ( msglist.size() > limit) {
-                    msglist.removeFirst();
+
+                addMessage(line);
+                messages.peekLast().writed = true;
+                if ( limit > 0 && messages.size() > limit ) {
+                    messages.removeFirst();
                 }
             }
-            String[] result = new String[msglist.size()];
-            msglist.toArray(result);
-            return result;
-        } catch (FileNotFoundException e) {
+            return true;
         } catch (IOException e) {
+            return false;
+        } finally {
+            try {
+                reader.close();
+            } catch (IOException e) {
+            }
         }
-        return null;
     }
+
+    class Message {
+        public String message;
+        public boolean writed;
+
+        public Message(String message) {
+            this.message = message;
+            writed = false;
+        }
+    }
+
 }

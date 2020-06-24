@@ -1,4 +1,6 @@
-package srv;
+package srv.authservice;
+
+import srv.AuthService;
 
 import java.sql.*;
 
@@ -30,13 +32,13 @@ public class SqliteAuthService implements AuthService {
         }
     }
 
-    public void open() throws SQLException, ClassNotFoundException {
+    public synchronized void open() throws SQLException, ClassNotFoundException {
         Class.forName("org.sqlite.JDBC");
         conn = DriverManager.getConnection("jdbc:sqlite:mydatabase.db");
         stmt = conn.createStatement();
     }
 
-    public void close() {
+    public synchronized void close() {
         if ( conn != null ) {
             try {
                 conn.close();
@@ -48,7 +50,7 @@ public class SqliteAuthService implements AuthService {
     }
 
     @Override
-    public String getNickByLoginAndPassword(String login, String password) {
+    public synchronized String getNickByLoginAndPassword(String login, String password) {
         if ( stmt != null ) {
             try {
                 selectNickname.setString(1, login);
@@ -65,7 +67,7 @@ public class SqliteAuthService implements AuthService {
     }
 
     @Override
-    public boolean registration(String login, String password, String nickname) {
+    public synchronized boolean registration(String login, String password, String nickname) {
         if ( stmt != null ) {
             try {
                 //Try to find already registered
@@ -87,7 +89,7 @@ public class SqliteAuthService implements AuthService {
     }
 
     @Override
-    public boolean changeNickForLogin(String login, String newNickName) {
+    public synchronized boolean changeNickForLogin(String login, String newNickName) {
         if ( stmt != null ) {
             try {
                 setNickByLogin.setString(1, newNickName);

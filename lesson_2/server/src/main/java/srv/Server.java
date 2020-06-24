@@ -1,11 +1,10 @@
 package srv;
 
+import srv.authservice.SSQLiteAuthService;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.Iterator;
 
@@ -14,7 +13,7 @@ public class Server {
     private ServerSocket serverSocket;
     private Socket socket;
     private Logger view;
-    private SqliteAuthService authService;
+    private SSQLiteAuthService authService;
 
     private Thread mainRing;
 
@@ -26,10 +25,11 @@ public class Server {
         view = new Logger();
 
         //authService = new SimpleAuthService();
-        authService = new SqliteAuthService();
         clients = new HashSet<>();
         mainRing = new Thread(()->{
             try {
+                SQLAdapter.connect();
+                authService = new SSQLiteAuthService();
                 serverSocket = new ServerSocket(port);
                 System.out.println("Server has been started on port " + port);
 
@@ -43,8 +43,8 @@ public class Server {
                 e.printStackTrace();
             } finally {
                 try {
+                    SQLAdapter.disconnect();
                     serverSocket.close();
-                    authService.close();
                 } catch (IOException e ) {
                     e.printStackTrace();
                 }
@@ -115,24 +115,17 @@ public class Server {
 
 
     public String getNickNameFor( String login, String password ) {
-        synchronized (authService) {
-            return authService.getNickByLoginAndPassword( login, password );
-        }
+        return authService.getNickByLoginAndPassword( login, password );
     }
 
     public boolean registerNewUser( String login, String password, String nickname ) {
-        synchronized (authService) {
-            return authService.registration(login, password, nickname);
-        }
+        return authService.registration(login, password, nickname);
     }
 
     public boolean newNickName( String login, String newNickName, String oldNickName, IOHandler handler ) {
-        boolean result;
-        synchronized (authService) {
-            result = authService.changeNickForLogin(login, newNickName);
+        if ( !authService.changeNickForLogin(login, newNickName) ) {
+            return false;
         }
-        if ( !result ) return result;
-
         synchronized (clients) {
             //Inform online users
             Iterator<IOHandler> iterator = clients.iterator();
