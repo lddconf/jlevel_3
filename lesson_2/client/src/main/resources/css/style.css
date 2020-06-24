@@ -1,0 +1,17 @@
+.button {
+    -fx-background-radius: 0;
+    -fx-label-padding: 0.3em 0.833333em 0.35em 0.833333em;
+}
+
+.menu-button {
+    -fx-background-radius: 0 5 5 0, 0 5 5 0, 0 4 4 0, 0 3 3 0;
+}
+
+.menu-button .label {
+    -fx-label-padding: 0.23em 0.2em 0.24em 0.2em;
+}
+
+.text-field.error {
+  -fx-text-box-border: red ;
+  -fx-focus-color: red ;
+}
