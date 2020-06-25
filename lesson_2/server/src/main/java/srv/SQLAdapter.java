@@ -15,6 +15,8 @@ public class SQLAdapter {
     private static PreparedStatement psAddMessage;
     private static PreparedStatement psGetMessagesForNickName;
 
+    public static final String BROAD_CAST_USER_NICK = "BROADCAST";
+
     private static void prepareAllStatement() throws SQLException {
         psSelectNickname = conn.prepareStatement("SELECT nick FROM users WHERE login = ? AND pass = ?;");
         psCreateUser = conn.prepareStatement("INSERT INTO users (login, nick, pass) VALUES (?,?,?)");
@@ -37,7 +39,9 @@ public class SQLAdapter {
                     "FROM " +
                         "messages " +
                     "JOIN users ON messages.`from` = users.id " +
-                    "WHERE messages.`to` IN ( select id from users where users.nick = ? );"
+                    "WHERE messages.`to` IN ( " +
+                        "select id from users where " +
+                        "users.nick = ? or users.nick = \"" + BROAD_CAST_USER_NICK +"\" );"
         );
     }
 
@@ -48,11 +52,12 @@ public class SQLAdapter {
                 Class.forName("org.sqlite.JDBC");
                 conn = DriverManager.getConnection("jdbc:sqlite:mydatabase.db");
                 stmt = conn.createStatement();
-                stmt.executeUpdate("CREATE TABLE IF NOT EXISTS `users` " +
-                        "( id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, " +
-                        "login TEXT NOT NULL UNIQUE, " +
-                        "nick TEXT NOT NULL UNIQUE, " +
-                        "pass TEXT NOT NULL );");
+                int result = stmt.executeUpdate("CREATE TABLE IF NOT EXISTS `users` " +
+                            "( id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, " +
+                            "login TEXT NOT NULL UNIQUE, " +
+                            "nick TEXT NOT NULL UNIQUE, " +
+                            "pass TEXT NOT NULL );");
+
 
                 stmt.executeUpdate("CREATE TABLE IF NOT EXISTS `messages` (" +
                         "id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE," +
@@ -64,6 +69,10 @@ public class SQLAdapter {
                         "FOREIGN KEY(`to`) REFERENCES `users`(`id`)" +
                         ");");
                 prepareAllStatement();
+
+                //Add broadcast messages
+                registration(BROAD_CAST_USER_NICK, BROAD_CAST_USER_NICK, BROAD_CAST_USER_NICK);
+
                 return true;
         } catch (ClassNotFoundException | SQLException e) {
             e.printStackTrace();
@@ -88,6 +97,9 @@ public class SQLAdapter {
     public synchronized static String getNickByLoginAndPassword(String login, String password) {
         if ( stmt != null ) {
             try {
+                if ( login.equals(BROAD_CAST_USER_NICK) ) {
+                    return null;
+                }
                 psSelectNickname.setString(1, login);
                 psSelectNickname.setString(2, password);
                 ResultSet rs = psSelectNickname.executeQuery();
@@ -125,6 +137,9 @@ public class SQLAdapter {
     public synchronized static boolean changeNickForLogin(String login, String newNickName) {
         if ( stmt != null ) {
             try {
+                if ( login.equals(BROAD_CAST_USER_NICK) ) {
+                    return false;
+                }
                 psSetNickByLogin.setString(1, newNickName);
                 psSetNickByLogin.setString(2, login);
                 int rs = psSetNickByLogin.executeUpdate();
@@ -137,7 +152,7 @@ public class SQLAdapter {
         return false;
     }
 
-    public synchronized boolean addMessage( String from, String to, String message ) {
+    public synchronized static boolean addMessage( String from, String to, String message ) {
         if ( stmt != null ) {
             try {
                 psAddMessage.setString(1, from);

@@ -61,6 +61,7 @@ public class Server {
                     }
                 }
             });
+            SQLAdapter.addMessage(fromNick, SQLAdapter.BROAD_CAST_USER_NICK, message);
     }
 
     public boolean sendMessageTo(String fromNick, String toNick, String message) {
@@ -77,6 +78,9 @@ public class Server {
                     status = true;
                 }
             }
+        }
+        if ( status ) {
+            SQLAdapter.addMessage(fromNick, toNick, message);
         }
         return status;
     }
