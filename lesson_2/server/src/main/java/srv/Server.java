@@ -28,7 +28,7 @@ public class Server {
         clients = new HashSet<>();
         mainRing = new Thread(()->{
             try {
-                SQLAdapter.connect();
+                if ( !SQLAdapter.connect() ) return;
                 authService = new SSQLiteAuthService();
                 serverSocket = new ServerSocket(port);
                 System.out.println("Server has been started on port " + port);

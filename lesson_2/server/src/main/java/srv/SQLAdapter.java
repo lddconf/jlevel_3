@@ -1,21 +1,44 @@
 package srv;
 
 import java.sql.*;
+import java.util.HashMap;
 
 public class SQLAdapter {
     private static Connection conn;
     private static Statement stmt;
 
-    private static PreparedStatement selectNickname;
-    private static PreparedStatement createUser;
-    private static PreparedStatement searchNickByLogin;
-    private static PreparedStatement setNickByLogin;
+    private static PreparedStatement psSelectNickname;
+    private static PreparedStatement psCreateUser;
+    private static PreparedStatement psSearchNickByLogin;
+    private static PreparedStatement psSetNickByLogin;
+
+    private static PreparedStatement psAddMessage;
+    private static PreparedStatement psGetMessagesForNickName;
 
     private static void prepareAllStatement() throws SQLException {
-        selectNickname = conn.prepareStatement("SELECT nick FROM users WHERE login = ? AND pass = ?;");
-        createUser = conn.prepareStatement("INSERT INTO users (login, nick, pass) VALUES (?,?,?)");
-        searchNickByLogin = conn.prepareStatement("SELECT nick FROM users WHERE login = ?;");
-        setNickByLogin = conn.prepareStatement("UPDATE users SET nick = ? WHERE login = ?");
+        psSelectNickname = conn.prepareStatement("SELECT nick FROM users WHERE login = ? AND pass = ?;");
+        psCreateUser = conn.prepareStatement("INSERT INTO users (login, nick, pass) VALUES (?,?,?)");
+        psSearchNickByLogin = conn.prepareStatement("SELECT nick FROM users WHERE login = ?;");
+        psSetNickByLogin = conn.prepareStatement("UPDATE users SET nick = ? WHERE login = ?");
+
+        psAddMessage = conn.prepareStatement("INSERT INTO messages(`from`, `to`, message) " +
+                "SELECT * " +
+                "FROM " +
+                "(SELECT id FROM users WHERE users.nick = ?) t1" +
+                " JOIN" +
+                "(SELECT id FROM users WHERE users.nick = ?) t2" +
+                " JOIN " +
+                "(SELECT ?) t3;");
+
+        psGetMessagesForNickName = conn.prepareStatement(
+                "SELECT " +
+                        "users.nick as `from`," +
+                        "message " +
+                    "FROM " +
+                        "messages " +
+                    "JOIN users ON messages.`from` = users.id " +
+                    "WHERE messages.`to` IN ( select id from users where users.nick = ? );"
+        );
     }
 
 
@@ -30,6 +53,16 @@ public class SQLAdapter {
                         "login TEXT NOT NULL UNIQUE, " +
                         "nick TEXT NOT NULL UNIQUE, " +
                         "pass TEXT NOT NULL );");
+
+                stmt.executeUpdate("CREATE TABLE IF NOT EXISTS `messages` (" +
+                        "id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT UNIQUE," +
+                        "`from` INTEGER NOT NULL," +
+                        "`to` INTEGER NOT NULL," +
+                        "`message` TEXT NOT NULL," +
+                        "`created_at` TEXT DEFAULT CURRENT_TIMESTAMP," +
+                        "FOREIGN KEY(`from`) REFERENCES `users`(`id`)," +
+                        "FOREIGN KEY(`to`) REFERENCES `users`(`id`)" +
+                        ");");
                 prepareAllStatement();
                 return true;
         } catch (ClassNotFoundException | SQLException e) {
@@ -55,9 +88,9 @@ public class SQLAdapter {
     public synchronized static String getNickByLoginAndPassword(String login, String password) {
         if ( stmt != null ) {
             try {
-                selectNickname.setString(1, login);
-                selectNickname.setString(2, password);
-                ResultSet rs = selectNickname.executeQuery();
+                psSelectNickname.setString(1, login);
+                psSelectNickname.setString(2, password);
+                ResultSet rs = psSelectNickname.executeQuery();
                 if ( rs.next() ) {
                     return rs.getString("nick");
                 }
@@ -72,15 +105,15 @@ public class SQLAdapter {
         if ( stmt != null ) {
             try {
                 //Try to find already registered
-                searchNickByLogin.setString(1, login);
-                ResultSet rs = searchNickByLogin.executeQuery();
+                psSearchNickByLogin.setString(1, login);
+                ResultSet rs = psSearchNickByLogin.executeQuery();
                 if ( rs.next() ) return false;
 
                 //Create a new one
-                createUser.setString(1, login);
-                createUser.setString(2, nickname);
-                createUser.setString(3, password);
-                if ( createUser.executeUpdate() > 0 ) {
+                psCreateUser.setString(1, login);
+                psCreateUser.setString(2, nickname);
+                psCreateUser.setString(3, password);
+                if ( psCreateUser.executeUpdate() > 0 ) {
                     return true;
                 }
             } catch (SQLException throwables) {
@@ -92,9 +125,9 @@ public class SQLAdapter {
     public synchronized static boolean changeNickForLogin(String login, String newNickName) {
         if ( stmt != null ) {
             try {
-                setNickByLogin.setString(1, newNickName);
-                setNickByLogin.setString(2, login);
-                int rs = setNickByLogin.executeUpdate();
+                psSetNickByLogin.setString(1, newNickName);
+                psSetNickByLogin.setString(2, login);
+                int rs = psSetNickByLogin.executeUpdate();
                 if ( rs > 0 ) {
                     return true;
                 }
@@ -104,5 +137,37 @@ public class SQLAdapter {
         return false;
     }
 
+    public synchronized boolean addMessage( String from, String to, String message ) {
+        if ( stmt != null ) {
+            try {
+                psAddMessage.setString(1, from);
+                psAddMessage.setString(2, to);
+                psAddMessage.setString(3, message);
+                int rs = psAddMessage.executeUpdate();
+                if ( rs > 0 ) {
+                    return true;
+                }
+            } catch (SQLException throwables) {
+            }
+        }
+        return false;
+    }
 
+    public synchronized static HashMap<String, String> getMessagesForNickName(String nickname) {
+        HashMap<String, String> messages = new HashMap<>();
+        if ( stmt != null ) {
+            try {
+                psGetMessagesForNickName.setString(1, nickname);
+                ResultSet rs = psGetMessagesForNickName.executeQuery();
+
+                while (rs.next()) {
+                  messages.put(rs.getString(1), rs.getString(2));
+                }
+                return messages;
+            } catch (SQLException throwables) {
+
+            }
+        }
+        return messages;
+    }
 }
