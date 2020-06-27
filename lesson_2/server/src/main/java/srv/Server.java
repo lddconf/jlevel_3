@@ -7,6 +7,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Server {
     private int port;
@@ -17,13 +19,14 @@ public class Server {
 
     private Thread mainRing;
 
+    private ExecutorService thread_pool;
     //IOHandler handler;
     HashSet<IOHandler> clients;
 
     public Server( int port ) {
         this.port = port;
         view = new Logger();
-
+        thread_pool = Executors.newCachedThreadPool();
         //authService = new SimpleAuthService();
         clients = new HashSet<>();
         mainRing = new Thread(()->{
@@ -35,7 +38,7 @@ public class Server {
 
                 while ( true ) {
                     socket = serverSocket.accept();
-                    new IOHandler(view, socket, this);
+                    thread_pool.execute(new IOHandler(view, socket, this));
                     System.out.println("Client is now connected: " + socket.getInetAddress() + ":" + socket.getPort() );
                 }
 
@@ -45,6 +48,7 @@ public class Server {
                 try {
                     SQLAdapter.disconnect();
                     serverSocket.close();
+                    thread_pool.shutdown();;
                 } catch (IOException e ) {
                     e.printStackTrace();
                 }
