@@ -74,7 +74,7 @@ public class Server {
             while ( iterator.hasNext() ) {
                 handler = iterator.next();
                 if ( handler.getNick().equals(toNick)) {
-                    handler.sendMessage(fromNick, message);
+                    handler.sendPrivateMessage(fromNick, message);
                     status = true;
                 }
             }

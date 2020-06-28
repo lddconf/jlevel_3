@@ -71,7 +71,7 @@ public class Controller implements Initializable, Loggable {
     static final String SEND_TO_ALL = " ALL";
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
-        setAuthenticated(false);
+        authenticatedChangedNotify(false);
         regStage = createRegWindow();
         nicknameStage = createNewNicknameWindow();
         setTitle("Not connected");
@@ -91,11 +91,11 @@ public class Controller implements Initializable, Loggable {
         });
     }
 
-    public void nickNameChanged(String nickName) {
+    public void nickNameChangedNotify(String nickName) {
         setTitle(nickName);
     }
 
-    public void setAuthenticated(boolean status) {
+    public void authenticatedChangedNotify(boolean status) {
         textField.setVisible(status);
         textField.setManaged(status);
         button.setVisible(status);

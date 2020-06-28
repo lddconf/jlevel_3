@@ -160,6 +160,10 @@ public class IOHandler {
         this.sendMessage("/from " + from + " " + msg);
     }
 
+    public void sendPrivateMessage( String from, String msg ) {
+        this.sendMessage("/privatefrom " + from + " " + msg);
+    }
+
     private void sendMessage( String msg ) {
         try {
             ostream.writeUTF(msg);
