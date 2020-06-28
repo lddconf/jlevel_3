@@ -10,16 +10,18 @@ import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class Server {
+public class Server implements Runnable {
     private int port;
     private ServerSocket serverSocket;
     private Socket socket;
     private Logger view;
     private SSQLiteAuthService authService;
 
-    private Thread mainRing;
+    //private Thread mainRing;
 
     private ExecutorService thread_pool;
+
+    private ExecutorService mainRing; //Не обязательно переходить на thread pool, было бы лучше оставить Thread
     //IOHandler handler;
     HashSet<IOHandler> clients;
 
@@ -29,32 +31,41 @@ public class Server {
         thread_pool = Executors.newCachedThreadPool();
         //authService = new SimpleAuthService();
         clients = new HashSet<>();
-        mainRing = new Thread(()->{
-            try {
-                if ( !SQLAdapter.connect() ) return;
-                authService = new SSQLiteAuthService();
-                serverSocket = new ServerSocket(port);
-                System.out.println("Server has been started on port " + port);
 
-                while ( true ) {
-                    socket = serverSocket.accept();
-                    thread_pool.execute(new IOHandler(view, socket, this));
-                    System.out.println("Client is now connected: " + socket.getInetAddress() + ":" + socket.getPort() );
-                }
+        //Старая версия кода
+        //mainRing = new Thread(this);
+        //mainRing.start();
 
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                try {
-                    SQLAdapter.disconnect();
-                    serverSocket.close();
-                    thread_pool.shutdown();;
-                } catch (IOException e ) {
-                    e.printStackTrace();
-                }
+        //Главный цикл через ExecurtorService
+        mainRing = Executors.newSingleThreadExecutor();
+        mainRing.execute(this);
+    }
+
+    @Override
+    public void run() {
+        try {
+            if ( !SQLAdapter.connect() ) return;
+            authService = new SSQLiteAuthService();
+            serverSocket = new ServerSocket(port);
+            System.out.println("Server has been started on port " + port);
+
+            while ( true ) {
+                socket = serverSocket.accept();
+                //Через executor service
+                thread_pool.execute(new IOHandler(view, socket, this));
+                System.out.println("Client is now connected: " + socket.getInetAddress() + ":" + socket.getPort() );
             }
-        });
-        mainRing.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                SQLAdapter.disconnect();
+                serverSocket.close();
+                thread_pool.shutdown();;
+            } catch (IOException e ) {
+                e.printStackTrace();
+            }
+        }
     }
 
     public void sendMessageToAllClients(String fromNick, String message) {
