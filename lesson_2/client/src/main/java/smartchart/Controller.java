@@ -66,10 +66,12 @@ public class Controller implements Initializable, Loggable {
     private SwitchNickNameController newNickNameController;
     private Stage nicknameStage;
 
+    private RingHistoryLogger logger;
+
     static final String SEND_TO_ALL = " ALL";
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
-        setAuthenticated(false);
+        authenticatedChangedNotify(false);
         regStage = createRegWindow();
         nicknameStage = createNewNicknameWindow();
         setTitle("Not connected");
@@ -81,7 +83,7 @@ public class Controller implements Initializable, Loggable {
                 @Override
                 public void handle(WindowEvent event) {
                     System.out.println("bue");
-                    if ( handler.isConnected() ) {
+                    if ( handler != null && handler.isConnected() ) {
                         handler.disconnect();
                     }
                 }
@@ -89,11 +91,11 @@ public class Controller implements Initializable, Loggable {
         });
     }
 
-    public void setNickName(String nickName) {
+    public void nickNameChangedNotify(String nickName) {
         setTitle(nickName);
     }
 
-    public void setAuthenticated(boolean status) {
+    public void authenticatedChangedNotify(boolean status) {
         textField.setVisible(status);
         textField.setManaged(status);
         button.setVisible(status);
@@ -115,15 +117,34 @@ public class Controller implements Initializable, Loggable {
 
         if (status) {
             setTitle(handler.getNick());
+            restoreMessages(handler.getCurrentLogin());
+        } else {
+            if ( logger != null ) {
+                logger.flushToFile();
+                logger = null;
+            }
         }
-
         menuRegistration.setDisable(status);
         menuChangeNickName.setDisable(!status);
     }
 
+    private void restoreMessages(String login) {
+        if ( logger == null ) {
+            logger = new RingHistoryLogger(login);
+            logger.restoreFromFileLastRecords(100);
 
-    private void setupErrorView(boolean disable) {
-        ObservableList<String> styleClass = textField.getStyleClass();
+            Platform.runLater(()->{
+                textArea.clear();
+                String[] messages = logger.getMessages();
+                for (int i = 0; i < messages.length; ++i) {
+                    textArea.appendText(messages[i] + "\n");
+                }
+            });
+        }
+    }
+
+    static void setupErrorView(boolean disable, TextField txt) {
+        ObservableList<String> styleClass = txt.getStyleClass();
         if ( !disable ) {
             if (!styleClass.contains("error")) {
                 styleClass.add("error");
@@ -140,13 +161,26 @@ public class Controller implements Initializable, Loggable {
         if ( textField.getText().length() == 0 ) {
             status = false;
         }
-        setupErrorView(status);
+        setupErrorView(status, textField);
         return status;
     }
 
+    @Override
     public void printMessage(String name, String msg) {
         synchronized (textArea) {
-            textArea.appendText("[" + name + "]:" + msg + "\n");
+            String line = "[" + name + "]:" + msg;
+            textArea.appendText(line + "\n");
+            if ( logger != null ) {
+                logger.addMessage(line);
+            }
+        }
+    }
+
+    @Override
+    public void printSystemInfo( String name, String msg ) {
+        synchronized (textArea) {
+            String line = "[" + name + "]:" + msg;
+            textArea.appendText(line + "\n");
         }
     }
 
@@ -176,7 +210,7 @@ public class Controller implements Initializable, Loggable {
         if ( keyEvent.getCode().equals(KeyCode.ENTER) ) {
             sendMessage();
         } else {
-            setupErrorView(true);
+            setupErrorView(true, textField);
         }
     }
 
@@ -227,12 +261,19 @@ public class Controller implements Initializable, Loggable {
             stage = new Stage();
             stage.setTitle("Switch Nickname");
             stage.setScene(new Scene(root, 300,50));
-            stage.setResizable(false);
+            stage.setResizable(true);
             stage.initStyle(StageStyle.UTILITY);
             stage.initModality(Modality.APPLICATION_MODAL);
-
             newNickNameController = fxmlLoader.getController();
             newNickNameController.controller = this;
+
+            stage.setOnShowing(new EventHandler<WindowEvent>() {
+                @Override
+                public void handle(WindowEvent event) {
+                    newNickNameController.onShowStuff();
+                }
+            });
+
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -264,6 +305,7 @@ public class Controller implements Initializable, Loggable {
             usersList.getItems().add(SEND_TO_ALL);
             usersList.setValue(SEND_TO_ALL);
 
+
             handler = new ClientIOHandler(this, this);
             connect.setText("Disconnect");
             setTitle("");
@@ -275,12 +317,16 @@ public class Controller implements Initializable, Loggable {
     }
 
     public void addOnlineUsers( String[] users ) {
-        usersList.getItems().addAll(users);
-
+        Platform.runLater(() -> {
+            usersList.getItems().addAll(users);
+        });
     }
 
+
     public void removeOfflineUsers( String[] users ) {
-        usersList.getItems().removeAll( users );
+        Platform.runLater(() -> {
+            usersList.getItems().removeAll(users);
+        });
 
         for (int i = 0; i < users.length; i++) {
             if ( usersList.getValue().equals(users[i])) {
@@ -290,9 +336,21 @@ public class Controller implements Initializable, Loggable {
                 break;
             }
         }
-
     }
 
+    public void nickNameChangedTo( String oldNickName, String newNickname ) {
+        Platform.runLater(() -> {
+            boolean switchToNew = false;
+            if ( usersList.getValue().equals(oldNickName )) {
+                switchToNew = true;
+            }
+            usersList.getItems().removeAll(oldNickName);
+            usersList.getItems().addAll(newNickname);
+            if ( switchToNew ) {
+                usersList.setValue(newNickname);
+            }
+        });
+    }
     public void onNewNNClicked(ActionEvent actionEvent) {
         nicknameStage.show();
     }

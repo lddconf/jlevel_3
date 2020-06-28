@@ -1,4 +1,6 @@
-package srv;
+package srv.authservice;
+
+import srv.AuthService;
 
 import java.util.ArrayList;
 

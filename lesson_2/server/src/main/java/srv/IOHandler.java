@@ -109,11 +109,11 @@ public class IOHandler {
                                     nick = tokens[1];
                                 } else {
                                     log.printMessage(nick,  nick + " error switching to " + tokens[1] );
-                                    sendMessage("/nickChangeErr ");
+                                    sendMessage("/nickChangeErr Invalid or duplicate nickname specified");
                                 }
                             } else {
                                 log.printMessage(nick,  nick + " error switching to " + tokens[1] );
-                                sendMessage("/nickChangeErr ");
+                                sendMessage("/nickChangeErr Invalid command");
                             }
                             continue;
                         }
@@ -158,6 +158,10 @@ public class IOHandler {
 
     public void sendMessage( String from, String msg ) {
         this.sendMessage("/from " + from + " " + msg);
+    }
+
+    public void sendPrivateMessage( String from, String msg ) {
+        this.sendMessage("/privatefrom " + from + " " + msg);
     }
 
     private void sendMessage( String msg ) {

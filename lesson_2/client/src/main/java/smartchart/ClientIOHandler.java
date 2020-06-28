@@ -6,7 +6,6 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
-import java.net.Socket;
 import java.util.Arrays;
 
 public class ClientIOHandler {
@@ -22,6 +21,7 @@ public class ClientIOHandler {
     private DataInputStream  istream;
     private DataOutputStream ostream;
     private Thread t;
+    private String lastLogin;
 
     public String getNick() {
         return nick;
@@ -30,6 +30,7 @@ public class ClientIOHandler {
     public ClientIOHandler(Loggable view, Controller controller) {
         this.view = view;
         this.controller = controller;
+        lastLogin = null;
         try {
             socket = new Socket(IP_ADDRESS, PORT);;
             istream = new DataInputStream(socket.getInputStream());
@@ -41,16 +42,16 @@ public class ClientIOHandler {
                     while (!Thread.interrupted()) {
                         String str = istream.readUTF();
                         if ( str.startsWith("/regOk")) {
-                            view.printMessage("I'm", "Registration succeed");
+                            view.printSystemInfo("I'm", "Registration succeed");
                             continue;
                         }
 
                         if ( str.startsWith("/regErr ")) {
                             String[] tokens = str.split("\\s", 2);
                             if ( tokens.length != 2 ) {
-                                view.printMessage("I'm", "Invalid registration data");
+                                view.printSystemInfo("I'm", "Invalid registration data");
                             } else {
-                                view.printMessage("I'm", tokens[1]);
+                                view.printSystemInfo("I'm", tokens[1]);
                             }
                             continue;
                         }
@@ -58,16 +59,16 @@ public class ClientIOHandler {
                         if ( str.startsWith("/authOk ")) {
                             String[] tokens = str.split("\\s", 2);
                             if ( tokens.length != 2 ) {
-                                view.printMessage("I'm", "Authentication error");
+                                view.printSystemInfo("I'm", "Authentication error");
                                 continue;
                             }
                             nick = tokens[1];
-                            view.printMessage("I'm", "Authentication accepted");
-                            controller.setAuthenticated(true);
+                            view.printSystemInfo("I'm", "Authentication accepted");
                             authenticated = true;
+                            controller.authenticatedChangedNotify(authenticated);
                             break;
                         }
-                        view.printMessage("I'm", "Authentication error");
+                        view.printSystemInfo("I'm", "Authentication error");
                     }
 
                     //Main loop
@@ -84,10 +85,17 @@ public class ClientIOHandler {
                             }
                         }
 
+                        if (str.startsWith("/privatefrom ")) {
+                            String[] tokens = str.split("\\s", 3);
+                            if ( tokens.length == 3 ) {
+                                view.printMessage(tokens[1]+"->I'm", tokens[2]);
+                            }
+                        }
+
                         if (str.startsWith("/wErr ")) {
                             String[] tokens = str.split("\\s", 4);
                             if ( tokens.length == 4 ) {
-                                view.printMessage(tokens[2], tokens[3]);
+                                view.printSystemInfo(tokens[2], tokens[3]);
                             }
                         }
 
@@ -108,32 +116,35 @@ public class ClientIOHandler {
                         if (str.startsWith("/nickChanged ")) {
                             String[] tokens = str.split("\\s", 3 );
                             if ( tokens.length == 3 ) {
-                                controller.removeOfflineUsers(Arrays.copyOfRange(tokens, 1, 2));
-                                controller.addOnlineUsers(Arrays.copyOfRange(tokens, 2, 3));
+                                view.printSystemInfo("I'm", "nickname [" + tokens[1] + "] changed to [" + tokens[2] + "]");
+                                controller.nickNameChangedTo(tokens[1], tokens[2]);
                             }
                         }
 
                         if (str.startsWith("/nickChangedOk ")) {
                             String[] tokens = str.split("\\s", 2 );
                             if ( tokens.length == 2 ) {
-                                view.printMessage(nick, "changed to " + tokens[1]);
+                                view.printSystemInfo("I'm", "nickname changed to [" + tokens[1] + "]");
                                 nick = tokens[1];
-                                controller.setNickName(nick);
+                                controller.nickNameChangedNotify(nick);
                             }
                         }
 
                         if (str.startsWith("/nickChangeErr ")) {
-                            view.printMessage(nick, "nick change error");
+                            String[] tokens = str.split("\\s", 2 );
+                            if ( tokens.length == 2 ) {
+                                view.printSystemInfo("I'm", tokens[1]);
+                            }
                         }
                     }
                 } catch (EOFException e ) {
                 } catch (ConnectException e) {
-                   view.printMessage("I'm","Can't connect to: " + IP_ADDRESS + ":" + PORT);
+                   view.printSystemInfo("I'm","Can't connect to: " + IP_ADDRESS + ":" + PORT);
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    //e.printStackTrace();
                 }  finally {
                     try {
-                        view.printMessage("I'm","Connection is now closed: " + socketInfo );
+                        view.printSystemInfo("I'm","Connection is now closed: " + socketInfo );
                         if ( socket != null ) {
                             socket.close();
                         }
@@ -141,7 +152,7 @@ public class ClientIOHandler {
 
                     } finally {
                         socket = null;
-                        controller.setAuthenticated(false);
+                        controller.authenticatedChangedNotify(false);
                         authenticated = false;
                     }
                 }
@@ -160,6 +171,7 @@ public class ClientIOHandler {
     public void tryAuthenticate(String login, String password) {
         if (( !authenticated ) && (socket != null ) && (socket.isConnected())) {
             sendMessage("/auth " + login + " " + password);
+            this.lastLogin = login;
         }
     }
 
@@ -187,6 +199,7 @@ public class ClientIOHandler {
     public void tryRegistration(String login, String password, String nickname) {
         if (( !authenticated ) && (socket != null ) && (socket.isConnected())) {
             sendMessage("/reg " + login + " " + password + " " + nickname);
+
         }
     }
 
@@ -196,8 +209,16 @@ public class ClientIOHandler {
         }
     }
 
+    public String getCurrentLogin() {
+        if ( authenticated ) {
+            return lastLogin;
+        }
+        return null;
+    }
+
     public void disconnect()  {
         if ( isConnected() ) {
+
             sendMessage("/end");
             if ( socket != null ) {
                 try {
@@ -207,8 +228,8 @@ public class ClientIOHandler {
                 socket = null;
             }
             t.interrupt();
-            controller.setAuthenticated(false);
-            authenticated = false;
+            lastLogin = null;
+            controller.authenticatedChangedNotify(authenticated);
         }
     }
 }
