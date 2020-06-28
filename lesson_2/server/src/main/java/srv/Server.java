@@ -37,8 +37,8 @@ public class Server implements Runnable {
         //mainRing.start();
 
         //Главный цикл через ExecurtorService
-        mainRing = Executors.newSingleThreadExecutor();
-        mainRing.execute(this);
+        thread_pool.execute(this);
+
     }
 
     @Override
