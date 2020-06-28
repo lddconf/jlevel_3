@@ -65,7 +65,7 @@ public class ClientIOHandler {
                             nick = tokens[1];
                             view.printSystemInfo("I'm", "Authentication accepted");
                             authenticated = true;
-                            controller.setAuthenticated(authenticated);
+                            controller.authenticatedChangedNotify(authenticated);
                             break;
                         }
                         view.printSystemInfo("I'm", "Authentication error");
@@ -82,6 +82,13 @@ public class ClientIOHandler {
                             String[] tokens = str.split("\\s", 3);
                             if ( tokens.length == 3 ) {
                                 view.printMessage(tokens[1], tokens[2]);
+                            }
+                        }
+
+                        if (str.startsWith("/privatefrom ")) {
+                            String[] tokens = str.split("\\s", 3);
+                            if ( tokens.length == 3 ) {
+                                view.printMessage(tokens[1]+"->I'm", tokens[2]);
                             }
                         }
 
@@ -119,7 +126,7 @@ public class ClientIOHandler {
                             if ( tokens.length == 2 ) {
                                 view.printSystemInfo("I'm", "nickname changed to [" + tokens[1] + "]");
                                 nick = tokens[1];
-                                controller.nickNameChanged(nick);
+                                controller.nickNameChangedNotify(nick);
                             }
                         }
 
@@ -145,7 +152,7 @@ public class ClientIOHandler {
 
                     } finally {
                         socket = null;
-                        controller.setAuthenticated(false);
+                        controller.authenticatedChangedNotify(false);
                         authenticated = false;
                     }
                 }
@@ -221,9 +228,8 @@ public class ClientIOHandler {
                 socket = null;
             }
             t.interrupt();
-            controller.setAuthenticated(false);
-            authenticated = false;
             lastLogin = null;
+            controller.authenticatedChangedNotify(authenticated);
         }
     }
 }
