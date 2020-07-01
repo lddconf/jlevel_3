@@ -32,11 +32,13 @@ public class Race {
     }
 
 
-    public void waitForCompetitorsAndBegin() throws BrokenBarrierException, InterruptedException {
-
-        if ( !raceConfigLock.writeLock().tryLock() ) {
-            return;
+    public boolean waitForCompetitorsAndBegin() throws BrokenBarrierException, InterruptedException {
+        raceConfigLock.writeLock().lock();
+        if ( atLine != null ) {
+            raceConfigLock.writeLock().unlock();
+            return false;
         }
+
         //Prepare to start
         atLine = new CyclicBarrier(competitorsCount+1);
         finishedCompetitors.set(0);
@@ -56,6 +58,7 @@ public class Race {
         raceConfigLock.writeLock().lock();
         atLine.reset();
         raceConfigLock.writeLock().unlock();
+        return true;
     }
 
     private void waitForOthers() throws BrokenBarrierException, InterruptedException {
