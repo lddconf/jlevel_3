@@ -1,6 +1,7 @@
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -12,6 +13,7 @@ public class Race {
     private ReadWriteLock    raceConfigLock;
     private int              competitorsCount;
     private AtomicInteger    finishedCompetitors;
+    private CountDownLatch   allReady;
     public ArrayList<Stage>  getStages() {
         return stages;
     }
@@ -32,25 +34,32 @@ public class Race {
     }
 
 
-    public boolean waitForCompetitorsAndBegin() throws BrokenBarrierException, InterruptedException {
+    public boolean prepareRaceAndwaitForCompetitors() throws BrokenBarrierException, InterruptedException {
         raceConfigLock.writeLock().lock();
-        if ( atLine != null ) {
+        if (atLine != null) {
             raceConfigLock.writeLock().unlock();
             return false;
         }
 
         //Prepare to start
-        atLine = new CyclicBarrier(competitorsCount+1);
+        atLine = new CyclicBarrier(competitorsCount + 1);
+        allReady = new CountDownLatch(competitorsCount);
+
         finishedCompetitors.set(0);
 
-        this.stages.forEach((Stage s)->{
-            if ( s instanceof Tunnel ) {
-                ((Tunnel)s).setLimit(competitorsCount/2);
+        this.stages.forEach((Stage s) -> {
+            if (s instanceof Tunnel) {
+                ((Tunnel) s).setLimit(competitorsCount / 2);
             }
         });
 
         raceConfigLock.writeLock().unlock();
 
+        allReady.await();
+        return true;
+    }
+
+    public void startRace() throws BrokenBarrierException, InterruptedException {
         //Wait while other players ready to run and run race
         waitForOthers();
 
@@ -58,7 +67,6 @@ public class Race {
         raceConfigLock.writeLock().lock();
         atLine.reset();
         raceConfigLock.writeLock().unlock();
-        return true;
     }
 
     private void waitForOthers() throws BrokenBarrierException, InterruptedException {
@@ -75,6 +83,11 @@ public class Race {
     }
 
     public void toStartGridAndRun(Car car) throws BrokenBarrierException, InterruptedException {
+        raceConfigLock.readLock().lock();
+        if ( allReady != null ) {
+            allReady.countDown();
+        }
+        raceConfigLock.readLock().unlock();
         waitForOthers();
     }
 

@@ -14,8 +14,9 @@ public class MainClass {
         }
 
         try {
-            race.waitForCompetitorsAndBegin();
+            race.prepareRaceAndwaitForCompetitors();
             System.out.println("ВАЖНОЕ ОБЪЯВЛЕНИЕ >>> Гонка началась!!!");
+            race.startRace();
             race.waitForCompetitorsFinished();
             System.out.println("ВАЖНОЕ ОБЪЯВЛЕНИЕ >>> Гонка закончилась!!!");
         } catch (BrokenBarrierException e) {
