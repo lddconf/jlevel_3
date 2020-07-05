@@ -23,8 +23,8 @@ public class IOHandler implements Runnable {
     private boolean doStuff;
     private Thread t;
 
-    public IOHandler(Loggable log, Socket socket, Server server) {
-        this.view = log;
+    public IOHandler(Socket socket, Server server) {
+        this.view = server.getView();
         this.socket = socket;
         this.server = server;
         this.nick = null;
@@ -58,31 +58,31 @@ public class IOHandler implements Runnable {
                 if ( str.startsWith( "/reg" )) {
                     String[] tokens = str.split("\\s");
                     if ( tokens.length != 4 ) {
-                        view.printMessage(connectionInfo, "Registration error");
+                        view.printError(connectionInfo, "Registration error");
                         sendMessage("/regErr Invalid Registration data");
                         continue;
                     }
 
                     if ( !server.registerNewUser(tokens[1], tokens[2], tokens[3]) ) {
-                        view.printMessage(connectionInfo, "Registration error");
+                        view.printError(connectionInfo, "Registration error");
                         sendMessage("/regErr Login already in use");
                         continue;
                     }
 
-                    view.printMessage(connectionInfo, "User \"" + tokens[3] + "\" " + "registered");
+                    view.printInfo(connectionInfo, "User \"" + tokens[3] + "\" " + "registered");
                     sendMessage("/regOk ");
                     continue;
                 }
 
                 //Authentication
                 if ( !str.startsWith("/auth ")) {
-                    view.printMessage(connectionInfo, "Authentication error");
+                    view.printError(connectionInfo, "Authentication error");
                     sendMessage("/authErr Invalid authentication data");
                     continue;
                 }
                 String[] tokens = str.split("\\s");
                 if ( tokens.length != 3 ) {
-                    view.printMessage(connectionInfo, "Authentication error");
+                    view.printError(connectionInfo, "Authentication error");
                     sendMessage("/authErr Invalid authentication data");
                     continue;
                 }
@@ -93,12 +93,12 @@ public class IOHandler implements Runnable {
                 }
 
                 if ( nick == null ) {
-                    view.printMessage(connectionInfo, "Invalid login or password");
+                    view.printError(connectionInfo, "Invalid login or password");
                     sendMessage("/authErr Invalid login or password");
                     continue;
                 }
 
-                view.printMessage(connectionInfo, "User \"" + nick + "\" " + "connected");
+                view.printInfo(connectionInfo, "User \"" + nick + "\" " + "connected");
                 sendMessage("/authOk "+nick);
                 break;
             }
@@ -115,15 +115,15 @@ public class IOHandler implements Runnable {
                     String[] tokens = str.split("\\s", 2);
                     if ( tokens.length == 2 ) {
                         if ( server.newNickName(login, tokens[1], nick, this) ) {
-                            view.printMessage(nick,  nick + " switched to " + tokens[1] );
+                            view.printInfo(nick,  nick + " switched to " + tokens[1] );
                             sendMessage("/nickChangedOk " + tokens[1]);
                             nick = tokens[1];
                         } else {
-                            view.printMessage(nick,  nick + " error switching to " + tokens[1] );
+                            view.printError(nick,  nick + " error switching to " + tokens[1] );
                             sendMessage("/nickChangeErr Invalid or duplicate nickname specified");
                         }
                     } else {
-                        view.printMessage(nick,  nick + " error switching to " + tokens[1] );
+                        view.printError(nick,  nick + " error switching to " + tokens[1] );
                         sendMessage("/nickChangeErr Invalid command");
                     }
                     continue;
@@ -136,7 +136,7 @@ public class IOHandler implements Runnable {
                             view.printMessage(nick + "->" + tokens[1] , str);
                         } else {
                             sendMessage("/wErr " + "User " + tokens[1] + " not found/connected");
-                            view.printMessage(nick + "->" + tokens[1], "[Dest user not found/connected]");
+                            view.printError(nick + "->" + tokens[1], "[Dest user not found/connected]");
                         }
                     }
                 } else {
@@ -144,13 +144,12 @@ public class IOHandler implements Runnable {
                     server.sendMessageToAllClients(nick, str);
                 }
             }
-        } catch (EOFException e ) {
-
         } catch (IOException e) {
 
         }  finally {
             try {
-                System.out.println("Connection is now closed: " + connectionInfo );
+                view.printInfo(connectionInfo, "connection is now closed" );
+                //System.out.println("Connection is now closed: " + connectionInfo );
                 if ( server != null ) {
                     server.unsubscribe(this);
                 }
