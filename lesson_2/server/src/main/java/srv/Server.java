@@ -9,12 +9,14 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.*;
 
 public class Server implements Runnable {
     private int port;
     private ServerSocket serverSocket;
     private Socket socket;
-    private Logger view;
+    private LoggerView view;
+    private static final Logger logger;
     private SSQLiteAuthService authService;
 
     //private Thread mainRing;
@@ -25,13 +27,16 @@ public class Server implements Runnable {
     //IOHandler handler;
     HashSet<IOHandler> clients;
 
+    static {
+        logger = Logger.getLogger(Server.class.getName());
+    }
+
     public Server( int port ) {
         this.port = port;
-        view = new Logger();
+        view = new LoggerView();
         thread_pool = Executors.newCachedThreadPool();
         //authService = new SimpleAuthService();
         clients = new HashSet<>();
-
         //Старая версия кода
         //mainRing = new Thread(this);
         //mainRing.start();
@@ -47,18 +52,20 @@ public class Server implements Runnable {
             if ( !SQLAdapter.connect() ) return;
             authService = new SSQLiteAuthService();
             serverSocket = new ServerSocket(port);
-            System.out.println("Server has been started on port " + port);
+
+            view.printInfo("Server has been started on port " + port);
 
             while ( true ) {
                 socket = serverSocket.accept();
                 //Через executor service
-                thread_pool.execute(new IOHandler(view, socket, this));
-                System.out.println("Client is now connected: " + socket.getInetAddress() + ":" + socket.getPort() );
+                thread_pool.execute(new IOHandler(socket, this));
+                view.printInfo("Client is now connected: " + socket.getInetAddress() + ":" + socket.getPort());
             }
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
             try {
+                view.printError("Critical", "Shutdown server");
                 SQLAdapter.disconnect();
                 serverSocket.close();
                 thread_pool.shutdown();;
@@ -66,6 +73,10 @@ public class Server implements Runnable {
                 e.printStackTrace();
             }
         }
+    }
+
+    public LoggerView getView() {
+        return view;
     }
 
     public void sendMessageToAllClients(String fromNick, String message) {
