@@ -15,7 +15,7 @@ public class Main {
             if ( search_val == input[i]) {
                 last_index = i;
             }
-        }
+        }gee
 
         //Create subarray
         if ( last_index >= 0 ) {
